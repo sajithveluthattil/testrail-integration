@@ -51,7 +51,6 @@ public class TestTheListener {
                 planEntry = client.addPlanEntry(plan.id, suiteId);
             }
 
-            //int runId = getRunId(plan.entries, suiteId);
             int runId = planEntry.runs.get(0).id;
 
             Result result = client.addResultForCase(runId, caseId, 1, "Nalin Added this comment Yo!! Yolo!");
@@ -79,16 +78,6 @@ public class TestTheListener {
             }
         }
         return null;
-    }
-
-    private static int getRunId(List<PlanEntry> entries, int suiteId) {
-        for (PlanEntry planEntry : entries) {
-            if (planEntry.suiteId == suiteId) {
-                List<Run> runs = planEntry.runs;
-                return runs.get(0).id;
-            }
-        }
-        throw new IllegalArgumentException("Didn't find entry for suite " + suiteId);
     }
 
     private static Map<String, Integer> getSuiteMap(List<Suite> suites) {

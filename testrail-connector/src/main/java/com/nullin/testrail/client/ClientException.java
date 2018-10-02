@@ -7,6 +7,8 @@ package com.nullin.testrail.client;
  */
 public class ClientException extends Exception
 {
+	private static final long serialVersionUID = 5776802474963955338L;
+
 	public ClientException(String message)
 	{
 		super(message);
