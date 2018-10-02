@@ -14,6 +14,8 @@ public class TestRailArgs {
     private Boolean enabled;
     //test plan id (if one already exists)
     private Integer testPlanId;
+    // test run id
+    private Integer testRunId;
     //suite names
     private List<String> suiteNames;
     //url to the TestRail instance
@@ -22,6 +24,8 @@ public class TestRailArgs {
     private String username;
     //password to login to TestRail
     private String password;
+    // by default will lookup testautomationid to get actual case id from testrail
+    private Boolean enableAutomationIdLookup = true;
 
     private TestRailArgs() {}
 
@@ -41,6 +45,16 @@ public class TestRailArgs {
                 args.testPlanId = Integer.valueOf(planId);
             } catch(NumberFormatException ex) {
                 throw new IllegalArgumentException("Plan Id is not an integer as expected");
+            }
+        }
+
+
+        String runId = System.getProperty("testRail.testRunId");
+        if (runId != null) {
+            try {
+                args.testRunId = Integer.valueOf(runId);
+            } catch(NumberFormatException ex) {
+                args.testRunId = null;
             }
         }
 
@@ -72,6 +86,11 @@ public class TestRailArgs {
             throw new IllegalArgumentException("TestRail password not specified (testRail.password)");
         }
 
+        if (System.getProperty("testRail.enableAutomationIdLookup") == null)
+            args.enableAutomationIdLookup = true;
+        else
+            args.enableAutomationIdLookup = Boolean.valueOf(System.getProperty("testRail.enableAutomationIdLookup"));
+
         return args;
     }
 
@@ -81,6 +100,10 @@ public class TestRailArgs {
 
     public Integer getTestPlanId() {
         return testPlanId;
+    }
+
+    public Integer getTestRunId() {
+        return testRunId;
     }
 
     public List<String> getSuiteNames() {
@@ -97,5 +120,9 @@ public class TestRailArgs {
 
     public String getPassword() {
         return password;
+    }
+
+    public Boolean getEnableAutomationIdLookup() {
+        return enableAutomationIdLookup;
     }
 }

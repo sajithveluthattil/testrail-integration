@@ -101,17 +101,17 @@ public class TestRailListener implements ITestListener, IConfigurationListener {
             Map<String, Object> props = new HashMap<String, Object>();
             long elapsed = (result.getEndMillis() - result.getStartMillis()) / 1000;
             elapsed = elapsed == 0 ? 1 : elapsed; //we can only track 1 second as the smallest unit
-            props.put("elapsed",  elapsed + "s");
-            props.put("status", getStatus(status));
-            props.put("throwable", throwable);
+            props.put(TestRailReporter.KEY_ELAPSED,  elapsed + "s");
+            props.put(TestRailReporter.KEY_STATUS, getStatus(status));
+            props.put(TestRailReporter.KEY_THROWABLE, throwable);
             //override if needed
             if (status == ITestResult.SKIP) {
                 ITestResult skipResult = testSkipResult.get();
                 if (skipResult != null) {
-                    props.put("throwable", skipResult.getThrowable());
+                    props.put(TestRailReporter.KEY_THROWABLE, skipResult.getThrowable());
                 }
             }
-            props.put("screenshotUrl", getScreenshotUrl(result));
+            props.put(TestRailReporter.KEY_SCREENSHOT_URL, getScreenshotUrl(result));
             Map<String, String> moreInfo = new LinkedHashMap<String, String>();
             moreInfo.put("class", result.getMethod().getRealClass().getCanonicalName());
             moreInfo.put("method", result.getMethod().getMethodName());
@@ -119,7 +119,7 @@ public class TestRailListener implements ITestListener, IConfigurationListener {
                 moreInfo.put("parameters", Arrays.toString(result.getParameters()));
             }
             moreInfo.putAll(getMoreInformation(result));
-            props.put("moreInfo", moreInfo);
+            props.put(TestRailReporter.KEY_MORE_INFO, moreInfo);
             reporter.reportResult(automationId, props);
         } catch(Exception ex) {
             //only log and do nothing else

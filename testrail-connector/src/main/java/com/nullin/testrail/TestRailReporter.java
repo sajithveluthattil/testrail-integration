@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,8 +34,8 @@ public class TestRailReporter {
     private TestRailClient client;
     private Map<String, Integer> caseIdLookupMap;
     private Map<String, Integer> testToRunIdMap;
-    private Boolean enabled;
     private String config;
+    private TestRailArgs TestRailIntegrationArgs;
 
     //keys for the properties map that is used to pass test information into this reporter
     public static final String KEY_MORE_INFO = "moreInfo";
@@ -63,21 +62,19 @@ public class TestRailReporter {
      * @throws com.nullin.testrail.client.ClientException
      */
     private TestRailReporter() {
-        TestRailArgs args = TestRailArgs.getNewTestRailListenerArgs();
-        enabled = args.getEnabled();
-        enabled = enabled == null ? false : enabled;
+        TestRailIntegrationArgs = TestRailArgs.getNewTestRailListenerArgs();
 
-        if (!enabled) {
+        if (!TestRailIntegrationArgs.getEnabled()) {
             logger.info("TestRail listener is not enabled. Results will not be reported to TestRail.");
             return;
         }
 
         logger.info("TestRail listener is enabled. Configuring...");
         try {
-            client = new TestRailClient(args.getUrl(), args.getUsername(), args.getPassword());
+            client = new TestRailClient(TestRailIntegrationArgs.getUrl(), TestRailIntegrationArgs.getUsername(), TestRailIntegrationArgs.getPassword());
 
             //prepare the test plan and stuff
-            Plan plan = client.getPlan(args.getTestPlanId());
+            Plan plan = client.getPlan(TestRailIntegrationArgs.getTestPlanId());
 
             /*
             We will make an assumption that the plan can contains multiple entries, but all the
@@ -94,22 +91,29 @@ public class TestRailReporter {
 
             int projectId = 0;
             int suiteId = 0;
-            testToRunIdMap = new HashMap<String, Integer>();
-            for (PlanEntry entry : planEntries) {
-                suiteIdSet.add(suiteId = entry.suiteId);
-                for (Run run : entry.runs) {
-                    projectId = run.projectId;
-                    List<Test> tests = client.getTests(run.id);
-                    for (Test test : tests) {
-                        testToRunIdMap.put(test.automationId + run.config, run.id);
+
+            if (TestRailIntegrationArgs.getTestRunId()<=0) {
+                testToRunIdMap = new HashMap<String, Integer>();
+                for (PlanEntry entry : planEntries) {
+                    suiteIdSet.add(suiteId = entry.suiteId);
+                    for (Run run : entry.runs) {
+                        projectId = run.projectId;
+                        List<Test> tests = client.getTests(run.id);
+                        for (Test test : tests) {
+                            testToRunIdMap.put(test.automationId + run.config, run.id);
+                        }
                     }
                 }
             }
 
-            caseIdLookupMap = cacheCaseIdLookupMap(client, projectId, suiteId);
+            if (TestRailIntegrationArgs.getEnableAutomationIdLookup()) {
+                caseIdLookupMap = cacheCaseIdLookupMap(client, projectId, suiteId);
+            } else {
+                //
+            }
 
             //check some constraints
-            if (suiteIdSet.size() != 1) {
+            if (suiteIdSet.size() > 1) {
                 throw new IllegalStateException("Referenced plan " + plan.id + " has multiple test suites (" +
                         suiteIdSet + "). This configuration is currently not supported.");
             }
@@ -168,7 +172,7 @@ public class TestRailReporter {
      *                   </ul>
      */
     public void reportResult(String automationId, Map<String, Object> properties) {
-        if (!enabled) {
+        if (!TestRailIntegrationArgs.getEnabled()) {
             return; //do nothing
         }
 
@@ -177,9 +181,15 @@ public class TestRailReporter {
         String elapsed = (String)properties.get(KEY_ELAPSED);
         String screenshotUrl = (String)properties.get(KEY_SCREENSHOT_URL);
         Map<String, String> moreInfo = (Map<String, String>)properties.get(KEY_MORE_INFO);
-
+        Integer caseId;
         try {
-            Integer caseId = caseIdLookupMap.get(automationId);
+            logger.info("About to process automationId: " + automationId);
+            if (TestRailIntegrationArgs.getEnableAutomationIdLookup())
+                caseId = caseIdLookupMap.get(automationId);
+            else
+                caseId = Integer.valueOf(automationId.replaceAll("[^0-9]", "")); // by default, automationId is our caseid
+            logger.info("caseId=" + caseId);
+
             if (caseId == null) {
                 logger.severe("Didn't find case id for test with automation id " + automationId);
                 return; //nothing more to do
@@ -214,15 +224,20 @@ public class TestRailReporter {
             body.put("comment", new String(comment.toString().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8));
             body.put("elapsed", elapsed);
 
-            Integer runId = testToRunIdMap.get(automationId + config);
-            if (runId == null) {
-                throw new IllegalArgumentException("Unable to find run id for test with automation id "
-                        + automationId + " and configuration set as " + config);
+            Integer runId = TestRailIntegrationArgs.getTestRunId();
+            if (runId==null) {
+                testToRunIdMap.get(automationId + config);
+                if (runId == null) {
+                    throw new IllegalArgumentException("Unable to find run id for test with automation id "
+                            + automationId + " and configuration set as " + config);
+                }
             }
             client.addResultForCase(runId, caseId, body);
-        } catch(Exception ex) {
+        } catch(ClientException ex) {
             //only log and do nothing else
             logger.severe("Ran into exception " + ex.getMessage());
+        } catch (IOException ex) {
+            logger.severe("IO Exception: " + ex.getMessage());
         }
     }
 
@@ -255,7 +270,7 @@ public class TestRailReporter {
     }
 
     public boolean isEnabled() {
-        return enabled;
+        return TestRailIntegrationArgs.getEnabled();
     }
 
 }

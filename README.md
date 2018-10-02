@@ -9,9 +9,9 @@ Requirements/Assumptions
 ### TestRail Configuration
 
 * Project should be setup as a single repository with baseline support.
-* A custom string field named `automation_id` should be added to the `Case` fields for the project.
+* ~~A custom string field named `automation_id` should be added to the `Case` fields for the project.~~
 * ~~All suite names should be unique~~
-* Automation IDs need to be unique within a TestRail test suite
+* In case you are using Automation ID field, it needs to be unique within a TestRail test suite
 
 ### Test Code
 
@@ -28,7 +28,7 @@ and should be fixed quickly.
 
 How to use `automation_id`
 ---------------------
-
+**NOTE:** Only applies when set `enableAutomationIdLookup` to `true`.
 The custom string field `automation_id` in TestRail contains unique strings that are referenced by test code to report
 results. This unique string is associated to tests in multiple ways:
 
@@ -117,6 +117,8 @@ Following system properties need to be configured during startup to configure/en
 * `testRail.testPlanId` : ID of a pre-created Test Plan in TestRail. This is an integer that you can get via APIs. Via, 
 TestRail UI, this is the integer part of an ID that is shown next to a Test Plan. E.g. for `R3285` id displayed in UI, it will 
 be `3285`.
+* `testRail.testRunId` : ID of a pre-created Test Run in TestRail (optional)
+* `testRail.enableAutomationIdLookup` : whether aupplied annotation are automation id or actual test case id (default: true)
 
 ### Listener Startup
 
@@ -157,7 +159,7 @@ Workflow
 - For each result to be reported, get the method and it's enclosing class (multiple runs for same suite,
 not supported yet. Need to handle configurationIds for that to work)
 	- get the annotations and figure out the automation id
-	- if the test was DD, the first parameter should be automation id
+	- if the test was Data DRiven, the first parameter should be automation id/case id
 	- from automation id, get the case id
 	- now we have case id and test run id
 	- report the result

@@ -6,3 +6,6 @@ release.properties
 .idea/
 deploy.py
 *.iml
+.settings
+.project
+.classpath
