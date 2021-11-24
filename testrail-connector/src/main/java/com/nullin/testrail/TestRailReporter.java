@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +44,7 @@ public class TestRailReporter {
     public static final String KEY_STATUS = "status";
     public static final String KEY_ELAPSED = "elapsed";
     public static final String KEY_THROWABLE = "throwable";
+    public static final String KEY_CASEID = "case_id";
 
     private static class Holder {
         private static final TestRailReporter INSTANCE = new TestRailReporter();
@@ -194,29 +196,8 @@ public class TestRailReporter {
                 logger.severe("Didn't find case id for test with automation id " + automationId);
                 return; //nothing more to do
             }
-
-            StringBuilder comment = new StringBuilder("More Info (if any):\n");
-            if (moreInfo != null && !moreInfo.isEmpty()) {
-                for (Map.Entry<String, String> entry: moreInfo.entrySet()) {
-                    comment.append("- ").append(entry.getKey()).append(" : ")
-                            .append('`').append(entry.getValue()).append("`\n");
-                }
-            } else {
-                comment.append("- `none`\n");
-            }
-            comment.append("\n");
-            if (screenshotUrl != null && !screenshotUrl.isEmpty()) {
-                comment.append("![](").append(screenshotUrl).append(")\n\n");
-            }
-            if (resultStatus.equals(ResultStatus.SKIP)) {
-                comment.append("Test skipped because of configuration method failure. " +
-                        "Related config error (if captured): \n\n");
-                comment.append(getStackTraceAsString(throwable));
-            }
-            if (resultStatus.equals(ResultStatus.FAIL)) {
-                comment.append("Test failed with following exception (if captured): \n\n");
-                comment.append(getStackTraceAsString(throwable));
-            }
+            
+            StringBuilder comment= buildComments(moreInfo, screenshotUrl, resultStatus, throwable);
 
             //add the result
             Map<String, Object> body = new HashMap<String, Object>();
@@ -239,6 +220,83 @@ public class TestRailReporter {
         } catch (IOException ex) {
             logger.severe("IO Exception: " + ex.getMessage());
         }
+    }
+    
+	public void reportResult(List<Map<String, Object>> properties) {
+		try {
+			Integer caseId;
+			List<Map<String, Object>> props = new ArrayList<Map<String, Object>>();
+			if (!TestRailIntegrationArgs.getEnabled()) {
+				return; // do nothing
+			}
+			int runId = TestRailIntegrationArgs.getTestRunId();
+			for (Map<String, Object> property : properties) {
+				ResultStatus resultStatus = (ResultStatus) property.get(KEY_STATUS);
+				Throwable throwable = (Throwable) property.get(KEY_THROWABLE);
+				String elapsed = (String) property.get(KEY_ELAPSED);
+				String screenshotUrl = (String) property.get(KEY_SCREENSHOT_URL);
+				Map<String, String> moreInfo = (Map<String, String>) property.get(KEY_MORE_INFO);
+				String case_id = (String) property.get(KEY_CASEID);
+
+				logger.info("About to process automationId: " + case_id);
+				if (TestRailIntegrationArgs.getEnableAutomationIdLookup())
+					caseId = caseIdLookupMap.get(case_id);
+				else
+					caseId = Integer.valueOf(case_id.replaceAll("[^0-9]", "")); 
+				logger.info("caseId=" + caseId);
+
+				if (caseId == null) {
+					logger.severe("Didn't find case id for test with automation id " + case_id);
+					return; // nothing more to do
+				}
+				StringBuilder comment = buildComments(moreInfo, screenshotUrl, resultStatus, throwable);
+
+				// add the result
+				Map<String, Object> body = new HashMap<String, Object>();
+//				body.put("case_id", caseId);
+				body.put("status_id", getStatus(resultStatus));
+				body.put("comment",
+						new String(comment.toString().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8));
+				body.put("elapsed", elapsed);
+
+				props.add(body);
+				client.addResultForCase(runId, caseId, body);
+			}
+			
+//			client.addResultForCases(runId, props);
+
+		} catch (Exception ex) {
+			//only log and do nothing else
+			logger.severe("Ran into exception " + ex.getMessage());
+		}
+
+	}
+    
+    private StringBuilder buildComments(Map<String, String> moreInfo, String screenshotUrl, ResultStatus resultStatus, Throwable throwable) throws UnsupportedEncodingException {
+        StringBuilder comment = new StringBuilder("More Info (if any):\n");
+        if (moreInfo != null && !moreInfo.isEmpty()) {
+            for (Map.Entry<String, String> entry: moreInfo.entrySet()) {
+                comment.append("- ").append(entry.getKey()).append(" : ")
+                        .append('`').append(entry.getValue()).append("`\n");
+            }
+        } else {
+            comment.append("- `none`\n");
+        }
+        comment.append("\n");
+        if (screenshotUrl != null && !screenshotUrl.isEmpty()) {
+            comment.append("![](").append(screenshotUrl).append(")\n\n");
+        }
+        if (resultStatus.equals(ResultStatus.SKIP)) {
+            comment.append("Test skipped because of configuration method failure. " +
+                    "Related config error (if captured): \n\n");
+            comment.append(getStackTraceAsString(throwable));
+        }
+        if (resultStatus.equals(ResultStatus.FAIL)) {
+            comment.append("Test failed with following exception (if captured): \n\n");
+            comment.append(getStackTraceAsString(throwable));
+        }
+		return comment;
+
     }
 
     private String getStackTraceAsString(Throwable throwable) throws UnsupportedEncodingException {
