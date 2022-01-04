@@ -243,13 +243,13 @@ public class TestRailReporter {
 			int runId = TestRailIntegrationArgs.getTestRunId();
 
 			for (Map<String, Object> property : properties) {
-				try {
-					ResultStatus resultStatus = (ResultStatus) property.get(KEY_STATUS);
-					Throwable throwable = (Throwable) property.get(KEY_THROWABLE);
-					String elapsed = (String) property.get(KEY_ELAPSED);
-					String screenshotUrl = (String) property.get(KEY_SCREENSHOT_URL);
-					Map<String, String> moreInfo = (Map<String, String>) property.get(KEY_MORE_INFO);
-					String case_id = (String) property.get(KEY_CASEID);
+				ResultStatus resultStatus = (ResultStatus) property.get(KEY_STATUS);
+				Throwable throwable = (Throwable) property.get(KEY_THROWABLE);
+				String elapsed = (String) property.get(KEY_ELAPSED);
+				String screenshotUrl = (String) property.get(KEY_SCREENSHOT_URL);
+				Map<String, String> moreInfo = (Map<String, String>) property.get(KEY_MORE_INFO);
+				String case_id = (String) property.get(KEY_CASEID);
+				try {				
 
 					logger.info("About to process automationId: " + case_id);
 					if (TestRailIntegrationArgs.getEnableAutomationIdLookup())
@@ -276,7 +276,7 @@ public class TestRailReporter {
 					client.addResultForCase(runId, caseId, body);
 
 				} catch (Exception ex) {
-					logger.severe("For loop exception");
+					logger.severe("Test case "+case_id+ " is not pat of "+runId+" run id. Therefore status not update.");
 
 				}
 
