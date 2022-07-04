@@ -49,11 +49,11 @@ In above example, a `PASS` will be reported for test with automation id `testC1`
 
 ### Data-driven Test
 
-No annotation needs to be added in this case. We assume that the first parameter passed into the data driven test is
-the unique automation id for the data-driven tests.
+You have to add `@TestRailCase(dataDriven = true)`. We assume that the first parameter passed into the data driven test is
+the unique test case id for the data-driven tests.
 
 ```java
-    
+    @TestRailCase(dataDriven = true)
     @DataProvider(name = "DP")
     public Object[][] getData() {
         return new Object[][] {
@@ -63,7 +63,23 @@ the unique automation id for the data-driven tests.
     }
 
     @Test(dataProvider = "DP")
-    public void test2(String testId, int x, int y) {
+    public void test2(String _testId, int x, int y) {
+        Assert.assertEquals(x, y);
+    }
+```
+
+Multiple test case Ids are also supported.
+```java
+    @TestRailCase(dataDriven = true)
+    @DataProvider(name = "DP")
+    public Object[][] getData() {
+        return new Object[][] {
+                { new String[] {"testA2", "testA3"}, 10, 10}
+        };
+    }
+
+    @Test(dataProvider = "DP")
+    public void test2(String[] _testIds, int x, int y) {
         Assert.assertEquals(x, y);
     }
 ```

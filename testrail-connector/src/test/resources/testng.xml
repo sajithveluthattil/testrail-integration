@@ -4,7 +4,7 @@
     </listeners>
     <test name="Some Tests">
         <classes>
-            <class name="com.nullin.testrail.sampleproj.TestClassA" />
+            <class name="com.nullin.testrail.sampleproj.TestClassDataDriven" />
             <class name="com.nullin.testrail.sampleproj.TestClassB" />
             <class name="com.nullin.testrail.sampleproj.pkg.TestClassC" />
         </classes>

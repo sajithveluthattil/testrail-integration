@@ -1,13 +1,7 @@
 package com.nullin.testrail;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 import com.nullin.testrail.annotations.TestRailCase;
@@ -46,114 +40,71 @@ public class TestRailListener implements ITestListener, IConfigurationListener {
 		}
 	}
 
-	/**
-	 * Reports the result for the test method to TestRail
-	 * 
-	 * @param result TestNG test result
-	 */
-	@SuppressWarnings("unused")
+
 	private void reportResult(ITestResult result) {
 		if (!enabled) {
 			return; // do nothing
 		}
 
-		try {
-			Method method = result.getMethod().getConstructorOrMethod().getMethod();
-			String className = result.getTestClass().getName();
-			String methodName = result.getMethod().getMethodName();
-			String id = className + "#" + methodName;
-			Object[] params = result.getParameters();
-			String firstParam[] = null;
-			String fParam = null;
+		int status = result.getStatus();
+		Throwable throwable = result.getThrowable();
+
+		Method method = result.getMethod().getConstructorOrMethod().getMethod();
+		String className = result.getTestClass().getName();
+		String methodName = result.getMethod().getMethodName();
+		Object[] params = result.getParameters();
+		String firstParam = null;
+
+		TestRailCase trCase = method.getAnnotation(TestRailCase.class);
+		Test test = method.getAnnotation(Test.class);
+		Boolean isUsingDataProvider = null != test.dataProvider() && !test.dataProvider().isEmpty();
+		Boolean markedAsDataDriven = trCase.dataDriven();
+		// list of string to hold test case IDs
+		List<String> testCaseIds = new ArrayList<String>();
+
+		// marked with testrail annotation
+		if (trCase != null) {
+			testCaseIds.addAll(Arrays.asList(trCase.value()));
+		} else {
+			logger.warning("No TestRailCase annotation found on method " + className + "." + methodName);
+		}
+
+		if (isUsingDataProvider && markedAsDataDriven) {
+			// support Data Driven test
+			// first param MUST be a single test-case ID
+			// or array of test-case IDs
 			if (params != null && params.length > 0) {
-				firstParam = (String[]) params[0];
-				if (firstParam.length == 1) {
-					id += "(" + firstParam[0] + ")";
-					fParam = String.valueOf(firstParam[0]);
-				}
-			}
-			int status = result.getStatus();
-			Throwable throwable = result.getThrowable();
-
-			TestRailCase trCase = method.getAnnotation(TestRailCase.class);
-			Test test = method.getAnnotation(Test.class);
-			String[] testCaseIds = trCase.value();
-			if (testCaseIds.length > 1) {
-				List<Map<String, Object>> properties = new ArrayList<Map<String, Object>>();
-				for (String testcaseId : testCaseIds) {
-					Map<String, Object> props = addMoreDetails(testcaseId, result, status, throwable);
-					properties.add(props);
-				}				
-				reporter.reportResult(properties);	
-
-			} else {
-				String automationId;
-				if (trCase == null) {
-					if (null != test.dataProvider() && !test.dataProvider().isEmpty()) {
-						if (fParam == null) {
-							logger.severe(
-									"Didn't find the first parameter for DD test " + id + ". Result not reported.");
-							return; // nothing more to do
-						}
-						automationId = fParam;
-					} else {
-						logger.severe(String.format(
-								"Test case %s is not annotated with TestRailCase annotation. " + "Result not reported",
-								id));
-						return; // nothing more to do
-					}
+				if (params[0].getClass().isArray()) {
+					// can be multiple test case ID
+					testCaseIds.addAll(Arrays.asList((String[]) params[0]));
 				} else {
-					automationId = testCaseIds[0];
+					firstParam = (String) params[0];
+					testCaseIds.add(firstParam);
 				}
-
-				if (automationId == null || automationId.isEmpty()) {
-					// case id not specified on method, check if this is a DD method
-					if (!trCase.selfReporting()) {
-						// self reporting test cases are responsible of reporting results on their own
-						logger.warning("Didn't find automation id nor is the test self reporting for test " + id
-								+ ". Please check test configuration.");
-						return; // nothing more to do
-					} else {
-						return; // nothing to do as the test is marked as self reporting
-					}
-				}
-				Map<String, Object> props = addMoreDetails(result, status, throwable);
-				reporter.reportResult(automationId, props);
 			}
-		} catch (Exception ex) {
-			// only log and do nothing else
-			logger.severe("Ran into exception " + ex.getMessage());
-		}
-	}
 
-	private Map<String, Object> addMoreDetails(ITestResult result, int status, Throwable throwable) {
-		Map<String, Object> props = new HashMap<String, Object>();
-		long elapsed = (result.getEndMillis() - result.getStartMillis()) / 1000;
-		elapsed = elapsed == 0 ? 1 : elapsed; // we can only track 1 second as the smallest unit
-		props.put(TestRailReporter.KEY_ELAPSED, elapsed + "s");
-		props.put(TestRailReporter.KEY_STATUS, getStatus(status));
-		props.put(TestRailReporter.KEY_THROWABLE, throwable);
-		// override if needed
-		if (status == ITestResult.SKIP) {
-			ITestResult skipResult = testSkipResult.get();
-			if (skipResult != null) {
-				props.put(TestRailReporter.KEY_THROWABLE, skipResult.getThrowable());
-			}
+			logger.info("Data Driven Test: " + className + "." + methodName);
 		}
-		props.put(TestRailReporter.KEY_SCREENSHOT_URL, getScreenshotUrl(result));
-		Map<String, String> moreInfo = new LinkedHashMap<String, String>();
-		moreInfo.put("class", result.getMethod().getRealClass().getCanonicalName());
-		moreInfo.put("method", result.getMethod().getMethodName());
-		if (result.getParameters() != null) {
-			moreInfo.put("parameters", Arrays.toString(result.getParameters()));
+
+		if (isUsingDataProvider && !markedAsDataDriven) {
+			logger.warning("Data Driven Test is not marked as data driven, but test is using data provider");
 		}
-		moreInfo.putAll(getMoreInformation(result));
-		props.put(TestRailReporter.KEY_MORE_INFO, moreInfo);
-		return props;
+
+		if (markedAsDataDriven && !isUsingDataProvider) {
+			logger.warning("Data Driven Test is marked as data driven, but test is not using data provider");
+		}
+
+		List<Map<String, Object>> properties = new ArrayList<>();
+		for (String testcaseId : testCaseIds) {
+			Map<String, Object> props = addMoreDetails(testcaseId, result, status, throwable);
+			properties.add(props);
+		}
+
+		reporter.reportResult(properties);
 	}
 
 	private Map<String, Object> addMoreDetails(String caseId, ITestResult result, int status, Throwable throwable) {
-		Map<String, Object> props = new HashMap<String, Object>();
+		Map<String, Object> props = new HashMap<>();
 		long elapsed = (result.getEndMillis() - result.getStartMillis()) / 1000;
 		elapsed = elapsed == 0 ? 1 : elapsed; // we can only track 1 second as the smallest unit
 		props.put(TestRailReporter.KEY_ELAPSED, elapsed + "s");
@@ -168,7 +119,7 @@ public class TestRailListener implements ITestListener, IConfigurationListener {
 			}
 		}
 		props.put(TestRailReporter.KEY_SCREENSHOT_URL, getScreenshotUrl(result));
-		Map<String, String> moreInfo = new LinkedHashMap<String, String>();
+		Map<String, String> moreInfo = new LinkedHashMap<>();
 		moreInfo.put("class", result.getMethod().getRealClass().getCanonicalName());
 		moreInfo.put("method", result.getMethod().getMethodName());
 		if (result.getParameters() != null) {

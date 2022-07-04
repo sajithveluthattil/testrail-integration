@@ -18,4 +18,6 @@ public @interface TestRailCase {
     //lets the listener know that it should not raise a warning for no automation id
     boolean selfReporting() default false;
 
+    // treat test with data provider in mind
+    boolean dataDriven() default false;
 }

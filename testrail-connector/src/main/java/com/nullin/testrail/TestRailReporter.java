@@ -32,12 +32,12 @@ import com.nullin.testrail.dto.Test;
  */
 public class TestRailReporter {
 
-	private Logger logger = Logger.getLogger(TestRailReporter.class.getName());
+	private final Logger logger = Logger.getLogger(TestRailReporter.class.getName());
 	private TestRailClient client;
 	private Map<String, Integer> caseIdLookupMap;
 	private Map<String, Integer> testToRunIdMap;
 	private String config;
-	private TestRailArgs TestRailIntegrationArgs;
+	private final TestRailArgs TestRailIntegrationArgs;
 
 	// keys for the properties map that is used to pass test information into this
 	// reporter
@@ -113,9 +113,8 @@ public class TestRailReporter {
 
 			if (TestRailIntegrationArgs.getEnableAutomationIdLookup()) {
 				caseIdLookupMap = cacheCaseIdLookupMap(client, projectId, suiteId);
-			} else {
-				//
 			}
+
 
 			// check some constraints
 			if (suiteIdSet.size() > 1) {
@@ -219,10 +218,8 @@ public class TestRailReporter {
 			Integer runId = TestRailIntegrationArgs.getTestRunId();
 			if (runId == null) {
 				testToRunIdMap.get(automationId + config);
-				if (runId == null) {
-					throw new IllegalArgumentException("Unable to find run id for test with automation id "
-							+ automationId + " and configuration set as " + config);
-				}
+				throw new IllegalArgumentException("Unable to find run id for test with automation id "
+						+ automationId + " and configuration set as " + config);
 			}
 			client.addResultForCase(runId, caseId, body);
 		} catch (ClientException ex) {

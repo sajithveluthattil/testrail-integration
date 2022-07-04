@@ -14,25 +14,25 @@ import org.testng.annotations.Test;
 @Listeners(TestRailListener.class)
 public class TestClassB {
 
-    @TestRailCase("C180531")
+    @TestRailCase("C220340")
     @Test
     public void oneTestPass() {
     	 assertTrue(false);
     }
     
-    @TestRailCase("C180532")
+    @TestRailCase("C220341")
     @Test
     public void oneTestFail() {
     	assertTrue(true);
     }
     
-    @TestRailCase({"C180533", "C180534"})
+    @TestRailCase({"C220342", "C220343"})
     @Test
     public void multipletestPass() {
         assertTrue(false);
     }
     
-    @TestRailCase({"C180535", "C180536"})
+    @TestRailCase({"C310306", "C220340"})
     @Test
     public void multipletestFail() {
         assertTrue(true);
