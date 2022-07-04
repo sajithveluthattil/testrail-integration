@@ -62,6 +62,7 @@ the unique test case id for the data-driven tests.
         };
     }
 
+    @TestRailCase(dataDriven = true)
     @Test(dataProvider = "DP")
     public void test2(String _testId, int x, int y) {
         Assert.assertEquals(x, y);
@@ -70,7 +71,6 @@ the unique test case id for the data-driven tests.
 
 Multiple test case Ids are also supported.
 ```java
-    @TestRailCase(dataDriven = true)
     @DataProvider(name = "DP")
     public Object[][] getData() {
         return new Object[][] {
@@ -78,6 +78,7 @@ Multiple test case Ids are also supported.
         };
     }
 
+    @TestRailCase(dataDriven = true)
     @Test(dataProvider = "DP")
     public void test2(String[] _testIds, int x, int y) {
         Assert.assertEquals(x, y);

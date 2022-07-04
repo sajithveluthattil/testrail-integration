@@ -28,11 +28,12 @@ public class TestClassDataDriven {
     }
 
     @TestRailCase(dataDriven = true)
-    /*@Test(dataProvider = "MYDP")
+    @Test(dataProvider = "MYDP")
     public void test2(String _testId, int x, int y) {
         Assert.assertTrue(getResult(x, y));
-    }*/
+    }
 
+    @TestRailCase(dataDriven = true)
     @Test(dataProvider = "MultiTestCasesDataProvider")
     public void testMultiTestCasesDataProvider(String[] _testIds, int x, int y) {
         Assert.assertTrue(getResult(x, y));

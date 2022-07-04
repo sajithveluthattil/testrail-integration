@@ -273,7 +273,7 @@ public class TestRailReporter {
 					client.addResultForCase(runId, caseId, body);
 
 				} catch (Exception ex) {
-					logger.severe("Test case "+case_id+ " is not pat of "+runId+" run id. Therefore status is not updated." + ex);
+					logger.severe("Test case "+case_id+ " is not part of "+runId+" run id. Therefore status is not updated." + ex);
 
 				}
 

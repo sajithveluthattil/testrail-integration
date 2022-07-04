@@ -1,15 +1,16 @@
 package com.nullin.testrail;
 
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.logging.Logger;
-
 import com.nullin.testrail.annotations.TestRailCase;
 import org.testng.IConfigurationListener;
 import org.testng.ITestContext;
 import org.testng.ITestListener;
 import org.testng.ITestResult;
 import org.testng.annotations.Test;
+
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * A TestNG listener to report results to TestRail instance
@@ -64,7 +65,9 @@ public class TestRailListener implements ITestListener, IConfigurationListener {
 
 		// marked with testrail annotation
 		if (trCase != null) {
-			testCaseIds.addAll(Arrays.asList(trCase.value()));
+			List<String> trCaseIDs = Arrays.asList(trCase.value());
+			List<String> nonEmptytestCaseIds = trCaseIDs.stream().filter(testCaseId -> !testCaseId.isEmpty()).collect(Collectors.toList());
+			testCaseIds.addAll(nonEmptytestCaseIds);
 		} else {
 			logger.warning("No TestRailCase annotation found on method " + className + "." + methodName);
 		}
