@@ -85,7 +85,7 @@ public class TestRailReporter {
 			 * We will make an assumption that the plan can contains multiple entries, but
 			 * all the entries would be associated with the same suite. This helps simplify
 			 * the automated reporting of results.
-			 * 
+			 *
 			 * Another assumption is that a test with a given automation id will not
 			 * re-appear twice for the same configuration set. Multiple instances of the
 			 * same configuration set is possible. If same automation id and configuration
@@ -166,7 +166,7 @@ public class TestRailReporter {
 
 	/**
 	 * Reports results to testrail
-	 * 
+	 *
 	 * @param automationId test automation id
 	 * @param properties   test properties. Following values are supported:
 	 *                     <ul>
@@ -190,6 +190,7 @@ public class TestRailReporter {
 		Throwable throwable = (Throwable) properties.get(KEY_THROWABLE);
 		String elapsed = (String) properties.get(KEY_ELAPSED);
 		String screenshotUrl = (String) properties.get(KEY_SCREENSHOT_URL);
+		String primaryDevice = TestRailIntegrationArgs.getDevice();
 		Map<String, String> moreInfo = (Map<String, String>) properties.get(KEY_MORE_INFO);
 		Integer caseId;
 		try {
@@ -206,7 +207,7 @@ public class TestRailReporter {
 				return; // nothing more to do
 			}
 
-			StringBuilder comment = buildComments(moreInfo, screenshotUrl, resultStatus, throwable);
+			StringBuilder comment = buildComments(moreInfo, screenshotUrl, resultStatus,primaryDevice, throwable);
 
 			// add the result
 			Map<String, Object> body = new HashMap<String, Object>();
@@ -214,7 +215,7 @@ public class TestRailReporter {
 			body.put("comment",
 					new String(comment.toString().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8));
 			body.put("elapsed", elapsed);
-
+			body.put("custom_test_device", 999);//comment added
 			Integer runId = TestRailIntegrationArgs.getTestRunId();
 			if (runId == null) {
 				testToRunIdMap.get(automationId + config);
@@ -246,7 +247,8 @@ public class TestRailReporter {
 				String screenshotUrl = (String) property.get(KEY_SCREENSHOT_URL);
 				Map<String, String> moreInfo = (Map<String, String>) property.get(KEY_MORE_INFO);
 				String case_id = (String) property.get(KEY_CASEID);
-				try {				
+				String primaryDevice = TestRailIntegrationArgs.getDevice();
+				try {
 
 					logger.info("About to process automationId: " + case_id);
 					if (TestRailIntegrationArgs.getEnableAutomationIdLookup())
@@ -259,7 +261,7 @@ public class TestRailReporter {
 						logger.severe("Didn't find case id for test with automation id " + case_id);
 						return; // nothing more to do
 					}
-					StringBuilder comment = buildComments(moreInfo, screenshotUrl, resultStatus, throwable);
+					StringBuilder comment = buildComments(moreInfo, screenshotUrl, resultStatus,primaryDevice , throwable);
 
 					// add the result
 					Map<String, Object> body = new HashMap<String, Object>();
@@ -268,6 +270,7 @@ public class TestRailReporter {
 					body.put("comment", new String(comment.toString().getBytes(StandardCharsets.ISO_8859_1),
 							StandardCharsets.UTF_8));
 					body.put("elapsed", elapsed);
+					body.put("custom_test_device",999);
 
 					props.add(body);
 					client.addResultForCase(runId, caseId, body);
@@ -288,8 +291,8 @@ public class TestRailReporter {
 
 	}
 
-	private StringBuilder buildComments(Map<String, String> moreInfo, String screenshotUrl, ResultStatus resultStatus,
-			Throwable throwable) throws UnsupportedEncodingException {
+	private StringBuilder buildComments(Map<String, String> moreInfo, String screenshotUrl, ResultStatus resultStatus, String primaryDevice,
+										Throwable throwable) throws UnsupportedEncodingException {
 		StringBuilder comment = new StringBuilder("More Info (if any):\n");
 		if (moreInfo != null && !moreInfo.isEmpty()) {
 			for (Map.Entry<String, String> entry : moreInfo.entrySet()) {
@@ -312,6 +315,7 @@ public class TestRailReporter {
 			comment.append("Test failed with following exception (if captured): \n\n");
 			comment.append(getStackTraceAsString(throwable));
 		}
+		comment.append("Primary device is "+primaryDevice);
 		return comment;
 
 	}
@@ -333,14 +337,14 @@ public class TestRailReporter {
 	 */
 	private int getStatus(ResultStatus status) {
 		switch (status) {
-		case PASS:
-			return 1; // Passed
-		case FAIL:
-			return 5; // Failed
-		case SKIP:
-			return 2; // Blocked
-		default:
-			return 3; // Untested
+			case PASS:
+				return 1; // Passed
+			case FAIL:
+				return 5; // Failed
+			case SKIP:
+				return 2; // Blocked
+			default:
+				return 3; // Untested
 		}
 	}
 

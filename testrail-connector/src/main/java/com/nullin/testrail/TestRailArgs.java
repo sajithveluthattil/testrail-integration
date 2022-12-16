@@ -26,6 +26,8 @@ public class TestRailArgs {
     private String password;
     // by default will lookup testautomationid to get actual case id from testrail
     private Boolean enableAutomationIdLookup = true;
+    //device on which executed
+    private String primaryDevice;
 
     private TestRailArgs() {}
 
@@ -71,6 +73,16 @@ public class TestRailArgs {
 
             } catch(NumberFormatException ex) {
                 throw new IllegalArgumentException("Plan Id is not an integer as expected");
+            }
+        }
+
+        String deviceName = System.getProperty("testRail.device");
+        System.out.println("DEVICE IS"+deviceName);
+        if (deviceName != null) {
+            try {
+                args.primaryDevice = deviceName;
+            } catch(NumberFormatException ex) {
+                args.primaryDevice = null;
             }
         }
 
@@ -124,5 +136,9 @@ public class TestRailArgs {
 
     public Boolean getEnableAutomationIdLookup() {
         return enableAutomationIdLookup;
+    }
+
+    public String getDevice() {
+        return primaryDevice;
     }
 }
